@@ -2,158 +2,115 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Gothic – HTML RPG</title>
+<title>Gothic 3D – HTML RPG</title>
 <style>
-body {
-    background: #0b0b0b;
-    color: #d4c29a;
-    font-family: monospace;
-    padding: 20px;
-}
-#game {
-    max-width: 700px;
-    margin: auto;
-    background: #141414;
-    padding: 20px;
-    border: 2px solid #3a2f1c;
-}
-button {
-    background: #2a2115;
-    color: #d4c29a;
-    border: 1px solid #5a4325;
-    padding: 10px;
-    margin: 5px 0;
-    width: 100%;
-    cursor: pointer;
-}
-button:hover {
-    background: #3a2f1c;
-}
-.stat {
-    margin: 5px 0;
+body { margin:0; overflow:hidden; background:black; }
+#info {
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:#d4c29a;
+    font-family:monospace;
+    background:rgba(0,0,0,0.5);
+    padding:10px;
 }
 </style>
 </head>
 <body>
 
-<div id="game">
-    <h2>⚔️ Gothic – Kolonia Karna</h2>
-    <div id="stats"></div>
-    <hr>
-    <div id="text"></div>
-    <div id="choices"></div>
+<div id="info">
+🗡️ GOTHIC 3D<br>
+WASD – ruch | Mysz – kamera | Spacja – skok
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
 <script>
-let player = {
-    hp: 100,
-    maxHp: 100,
-    exp: 0,
-    lvl: 1,
-    dmg: 10
-};
+let scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x000000, 10, 80);
 
-function updateStats() {
-    document.getElementById("stats").innerHTML =
-        `<div class="stat">❤️ HP: ${player.hp}/${player.maxHp}</div>
-         <div class="stat">⭐ Level: ${player.lvl}</div>
-         <div class="stat">⚔️ Obrażenia: ${player.dmg}</div>
-         <div class="stat">📈 EXP: ${player.exp}</div>`;
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// ŚWIATŁO
+let light = new THREE.DirectionalLight(0xffffff, 0.8);
+light.position.set(10,20,10);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x404040));
+
+// ZIEMIA
+let groundGeo = new THREE.PlaneGeometry(200,200);
+let groundMat = new THREE.MeshStandardMaterial({color:0x2b2b2b});
+let ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+// GRACZ
+let playerGeo = new THREE.CapsuleGeometry(0.5, 1.2);
+let playerMat = new THREE.MeshStandardMaterial({color:0x555555});
+let player = new THREE.Mesh(playerGeo, playerMat);
+player.position.y = 1;
+scene.add(player);
+
+// KAMERA ZA POSTACIĄ
+camera.position.set(0,2,5);
+
+let velocityY = 0;
+let canJump = true;
+
+// STEROWANIE
+let keys = {};
+document.addEventListener("keydown", e => keys[e.code] = true);
+document.addEventListener("keyup", e => keys[e.code] = false);
+
+// MYSZ
+document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
+document.body.onclick = () => document.body.requestPointerLock();
+
+let yaw = 0;
+document.addEventListener("mousemove", e => {
+    if (document.pointerLockElement === document.body) {
+        yaw -= e.movementX * 0.002;
+    }
+});
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    // RUCH
+    let speed = 0.08;
+    let forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+    let right = new THREE.Vector3(Math.sin(yaw+Math.PI/2),0,Math.cos(yaw+Math.PI/2));
+
+    if (keys["KeyW"]) player.position.add(forward.clone().multiplyScalar(-speed));
+    if (keys["KeyS"]) player.position.add(forward.clone().multiplyScalar(speed));
+    if (keys["KeyA"]) player.position.add(right.clone().multiplyScalar(speed));
+    if (keys["KeyD"]) player.position.add(right.clone().multiplyScalar(-speed));
+
+    // SKOK
+    velocityY -= 0.01;
+    player.position.y += velocityY;
+    if (player.position.y <= 1) {
+        player.position.y = 1;
+        velocityY = 0;
+        canJump = true;
+    }
+    if (keys["Space"] && canJump) {
+        velocityY = 0.2;
+        canJump = false;
+    }
+
+    // KAMERA
+    camera.position.x = player.position.x + Math.sin(yaw) * 5;
+    camera.position.z = player.position.z + Math.cos(yaw) * 5;
+    camera.position.y = player.position.y + 2;
+    camera.lookAt(player.position);
+
+    renderer.render(scene, camera);
 }
-
-function show(text, choices) {
-    document.getElementById("text").innerHTML = text;
-    let c = document.getElementById("choices");
-    c.innerHTML = "";
-    choices.forEach(ch => {
-        let b = document.createElement("button");
-        b.innerText = ch.text;
-        b.onclick = ch.action;
-        c.appendChild(b);
-    });
-    updateStats();
-}
-
-function start() {
-    show(
-        "Budząc się w Kolonii Karnej, słyszysz krzyki strażników i szczęk mieczy.",
-        [
-            { text: "Rozejrzyj się", action: village },
-            { text: "Sprawdź swoje pięści", action: () => alert("Silne jak na nowego!") }
-        ]
-    );
-}
-
-function village() {
-    show(
-        "Widzisz starego wojownika. Patrzy na ciebie podejrzliwie.",
-        [
-            { text: "Porozmawiaj z nim", action: talk },
-            { text: "Idź do lasu", action: forest }
-        ]
-    );
-}
-
-function talk() {
-    show(
-        "„Nowy? Jeśli chcesz przeżyć – naucz się walczyć.”",
-        [
-            { text: "Poproś o trening", action: train },
-            { text: "Odejdź", action: village }
-        ]
-    );
-}
-
-function train() {
-    player.dmg += 5;
-    show(
-        "Trening był brutalny, ale skuteczny. +5 obrażeń.",
-        [{ text: "Wróć", action: village }]
-    );
-}
-
-function forest() {
-    show(
-        "W lesie atakuje cię wilk!",
-        [{ text: "Walcz", action: fight }]
-    );
-}
-
-function fight() {
-    let wolfHp = 30;
-    let interval = setInterval(() => {
-        wolfHp -= player.dmg;
-        player.hp -= 8;
-
-        if (player.hp <= 0) {
-            clearInterval(interval);
-            show("Zginąłeś... Kolonia pochłania słabych.", [
-                { text: "Zacznij od nowa", action: () => location.reload() }
-            ]);
-        }
-
-        if (wolfHp <= 0) {
-            clearInterval(interval);
-            player.exp += 20;
-            if (player.exp >= 50) {
-                player.lvl++;
-                player.exp = 0;
-                player.maxHp += 20;
-                player.hp = player.maxHp;
-                player.dmg += 5;
-            }
-            show(
-                "Pokonałeś wilka. Zdobywasz doświadczenie.",
-                [{ text: "Wróć do obozu", action: village }]
-            );
-        }
-        updateStats();
-    }, 800);
-}
-
-start();
+animate();
 </script>
-
 </body>
 </html>
 
