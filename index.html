@@ -2,112 +2,161 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>Gothic 3D – HTML RPG</title>
+<title>Gothic 3D – Dolina</title>
 <style>
 body { margin:0; overflow:hidden; background:black; }
-#info {
+#hud {
     position:absolute;
     top:10px;
     left:10px;
     color:#d4c29a;
     font-family:monospace;
-    background:rgba(0,0,0,0.5);
+    background:rgba(0,0,0,0.6);
     padding:10px;
 }
 </style>
 </head>
 <body>
 
-<div id="info">
-🗡️ GOTHIC 3D<br>
-WASD – ruch | Mysz – kamera | Spacja – skok
-</div>
+<div id="hud">❤️ HP: <span id="hp">100</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158/build/three.min.js"></script>
 <script>
 let scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x000000, 10, 80);
+scene.fog = new THREE.Fog(0x000000, 20, 120);
 
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-let renderer = new THREE.WebGLRenderer();
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 500);
+let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // ŚWIATŁO
-let light = new THREE.DirectionalLight(0xffffff, 0.8);
-light.position.set(10,20,10);
-scene.add(light);
-scene.add(new THREE.AmbientLight(0x404040));
+scene.add(new THREE.AmbientLight(0x555555));
+let sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.position.set(50,80,20);
+scene.add(sun);
 
-// ZIEMIA
-let groundGeo = new THREE.PlaneGeometry(200,200);
-let groundMat = new THREE.MeshStandardMaterial({color:0x2b2b2b});
-let ground = new THREE.Mesh(groundGeo, groundMat);
-ground.rotation.x = -Math.PI/2;
-scene.add(ground);
+// TEREN (PAGÓRKI)
+let terrainGeo = new THREE.PlaneGeometry(300,300,50,50);
+terrainGeo.rotateX(-Math.PI/2);
+terrainGeo.vertices?.forEach(v => {
+    v.y = Math.random()*4;
+});
+terrainGeo.computeVertexNormals();
+
+let terrainMat = new THREE.MeshStandardMaterial({color:0x2f2f2f});
+let terrain = new THREE.Mesh(terrainGeo, terrainMat);
+scene.add(terrain);
+
+// ZAMEK – RUINY
+function wall(x,z,w,h){
+    let g = new THREE.BoxGeometry(w,5,h);
+    let m = new THREE.MeshStandardMaterial({color:0x444444});
+    let mesh = new THREE.Mesh(g,m);
+    mesh.position.set(x,2.5,z);
+    scene.add(mesh);
+}
+wall(20,20,20,2);
+wall(20,30,20,2);
+wall(10,25,2,12);
+wall(30,25,2,12);
+
+// DRZEWA
+for(let i=0;i<60;i++){
+    let t = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.5,0.7,5),
+        new THREE.MeshStandardMaterial({color:0x3a2f1c})
+    );
+    t.position.set(
+        Math.random()*200-100,
+        2.5,
+        Math.random()*200-100
+    );
+    scene.add(t);
+}
 
 // GRACZ
-let playerGeo = new THREE.CapsuleGeometry(0.5, 1.2);
-let playerMat = new THREE.MeshStandardMaterial({color:0x555555});
-let player = new THREE.Mesh(playerGeo, playerMat);
-player.position.y = 1;
+let player = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.5,1.2),
+    new THREE.MeshStandardMaterial({color:0x666666})
+);
+player.position.y = 2;
 scene.add(player);
 
-// KAMERA ZA POSTACIĄ
-camera.position.set(0,2,5);
-
-let velocityY = 0;
-let canJump = true;
-
-// STEROWANIE
-let keys = {};
-document.addEventListener("keydown", e => keys[e.code] = true);
-document.addEventListener("keyup", e => keys[e.code] = false);
-
-// MYSZ
-document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
-document.body.onclick = () => document.body.requestPointerLock();
-
+let playerHP = 100;
 let yaw = 0;
-document.addEventListener("mousemove", e => {
-    if (document.pointerLockElement === document.body) {
-        yaw -= e.movementX * 0.002;
-    }
+let keys = {};
+document.addEventListener("keydown",e=>keys[e.code]=true);
+document.addEventListener("keyup",e=>keys[e.code]=false);
+
+document.body.onclick = () => document.body.requestPointerLock();
+document.addEventListener("mousemove",e=>{
+    if(document.pointerLockElement===document.body)
+        yaw -= e.movementX*0.002;
 });
 
-function animate() {
+// WILKI
+let wolves = [];
+function spawnWolf(x,z){
+    let w = new THREE.Mesh(
+        new THREE.BoxGeometry(1.5,1,3),
+        new THREE.MeshStandardMaterial({color:0x552222})
+    );
+    w.position.set(x,1,z);
+    w.hp = 40;
+    scene.add(w);
+    wolves.push(w);
+}
+spawnWolf(-30,-20);
+spawnWolf(-35,-25);
+spawnWolf(-40,-15);
+
+// ATAK
+document.addEventListener("mousedown",()=>{
+    wolves.forEach(w=>{
+        if(w.position.distanceTo(player.position)<3){
+            w.hp -= 20;
+        }
+    });
+});
+
+// GAME LOOP
+function animate(){
     requestAnimationFrame(animate);
 
-    // RUCH
-    let speed = 0.08;
-    let forward = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
-    let right = new THREE.Vector3(Math.sin(yaw+Math.PI/2),0,Math.cos(yaw+Math.PI/2));
+    let speed=0.1;
+    let f = new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+    let r = new THREE.Vector3(Math.sin(yaw+Math.PI/2),0,Math.cos(yaw+Math.PI/2));
 
-    if (keys["KeyW"]) player.position.add(forward.clone().multiplyScalar(-speed));
-    if (keys["KeyS"]) player.position.add(forward.clone().multiplyScalar(speed));
-    if (keys["KeyA"]) player.position.add(right.clone().multiplyScalar(speed));
-    if (keys["KeyD"]) player.position.add(right.clone().multiplyScalar(-speed));
+    if(keys.KeyW) player.position.add(f.clone().multiplyScalar(-speed));
+    if(keys.KeyS) player.position.add(f.clone().multiplyScalar(speed));
+    if(keys.KeyA) player.position.add(r.clone().multiplyScalar(speed));
+    if(keys.KeyD) player.position.add(r.clone().multiplyScalar(-speed));
 
-    // SKOK
-    velocityY -= 0.01;
-    player.position.y += velocityY;
-    if (player.position.y <= 1) {
-        player.position.y = 1;
-        velocityY = 0;
-        canJump = true;
-    }
-    if (keys["Space"] && canJump) {
-        velocityY = 0.2;
-        canJump = false;
-    }
+    // WILKI AI
+    wolves.forEach(w=>{
+        let d = w.position.distanceTo(player.position);
+        if(d<20){
+            w.lookAt(player.position);
+            w.translateZ(0.05);
+        }
+        if(d<2){
+            playerHP -= 0.3;
+            document.getElementById("hp").innerText=Math.floor(playerHP);
+        }
+        if(w.hp<=0){
+            scene.remove(w);
+        }
+    });
 
-    // KAMERA
-    camera.position.x = player.position.x + Math.sin(yaw) * 5;
-    camera.position.z = player.position.z + Math.cos(yaw) * 5;
-    camera.position.y = player.position.y + 2;
+    camera.position.set(
+        player.position.x + Math.sin(yaw)*6,
+        player.position.y + 3,
+        player.position.z + Math.cos(yaw)*6
+    );
     camera.lookAt(player.position);
 
-    renderer.render(scene, camera);
+    renderer.render(scene,camera);
 }
 animate();
 </script>
