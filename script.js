@@ -8,7 +8,7 @@ const playPauseBtn = document.getElementById("playPause");
 
 let songs = [
     {id: 'repo', title: 'R.E.P.O', artist: 'Młody AI', file: 'repo.mp3', cover: 'repo.jpg'},
-    {id: 'yeah', title: 'Yeah', artist: 'Młody AI', file: 'yeah.mp3', cover: 'yeah.jpg'}
+    {id: 'yeah', title: 'Yeah', artist: 'Młody AI', file: 'Yeah.mp3', cover: 'yeah.jpg'}
 ];
 
 let currentSongIndex = 0;
