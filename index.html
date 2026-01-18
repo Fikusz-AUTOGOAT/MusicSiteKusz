@@ -1,172 +1,27 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Mini NFS 3D – Endless</title>
-  <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #ui {
-      position: fixed;
-      top: 10px; left: 10px;
-      color: white;
-      font-family: Arial, sans-serif;
-      background: rgba(0,0,0,0.6);
-      padding: 10px;
-      border-radius: 8px;
-    }
-    #shop {
-      position: fixed;
-      top: 10px; right: 10px;
-      color: white;
-      font-family: Arial, sans-serif;
-      background: rgba(0,0,0,0.6);
-      padding: 10px;
-      border-radius: 8px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Moje Spotify</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
-  <div id="ui">
-    <div>🚗 Endless NFS 3D</div>
-    <div>A / D – skręt</div>
-    <div>Monety: <span id="coins">0</span></div>
-    <div id="status"></div>
-  </div>
 
-  <div id="shop">
-    <div>🏪 Sklep</div>
-    <button onclick="buyCar(1)">Auto 2 (100)</button><br><br>
-    <button onclick="buyCar(2)">Auto 3 (300)</button>
-  </div>
+<h1>🎧 Moja Muzyka</h1>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<div class="song">
+    <h3>🔥 Moja Piosenka</h3>
+    <audio controls onclick="playSong('song1')">
+        <source src="piosenka.mp3" type="audio/mpeg">
+    </audio>
+    <p>Wyświetlenia: <span id="song1">0</span></p>
+</div>
 
-  <script>
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x000000, 30, 200);
-
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(50, 100, 50);
-    scene.add(light);
-
-    // DROGA
-    const roadGeo = new THREE.PlaneGeometry(50, 200);
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const roadSegments = [];
-
-    for (let i = 0; i < 5; i++) {
-      const r = new THREE.Mesh(roadGeo, roadMat);
-      r.rotation.x = -Math.PI / 2;
-      r.position.z = -i * 200;
-      scene.add(r);
-      roadSegments.push(r);
-    }
-
-    // AUTO GRACZA
-    const car = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 1, 4),
-      new THREE.MeshStandardMaterial({ color: 0xff0000 })
-    );
-    car.position.y = 0.5;
-    scene.add(car);
-
-    camera.position.set(0, 5, 10);
-
-    // AI AUTA
-    const enemies = [];
-    function spawnEnemy(z) {
-      const e = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 1, 4),
-        new THREE.MeshStandardMaterial({ color: 0x00aaff })
-      );
-      e.position.set((Math.random() * 30) - 15, 0.5, z);
-      scene.add(e);
-      enemies.push(e);
-    }
-
-    for (let i = 1; i < 10; i++) spawnEnemy(-i * 40);
-
-    let speed = 0.8;
-    let coins = 0;
-    let gameOver = false;
-    let carLevel = 0;
-
-    const keys = {};
-    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-    function buyCar(level) {
-      const prices = [0, 100, 300];
-      if (coins >= prices[level] && level > carLevel) {
-        coins -= prices[level];
-        carLevel = level;
-        speed = 0.8 + level * 0.4;
-        car.material.color.set(level === 1 ? 0x00ff00 : 0xffff00);
-        document.getElementById('coins').innerText = coins;
-      }
-    }
-
-    function update() {
-      if (gameOver) return;
-
-      // RUCH
-      car.position.z -= speed;
-      if (keys['a']) car.position.x -= 0.4;
-      if (keys['d']) car.position.x += 0.4;
-      car.position.x = Math.max(-20, Math.min(20, car.position.x));
-
-      // MONETY
-      coins += Math.floor(speed * 2);
-      document.getElementById('coins').innerText = coins;
-
-      // DROGA ENDLESS
-      roadSegments.forEach(r => {
-        if (r.position.z - car.position.z > 200) {
-          r.position.z -= 1000;
-        }
-      });
-
-      // ENEMIES
-      enemies.forEach(e => {
-        if (e.position.z - car.position.z > 10) {
-          e.position.z -= 400;
-          e.position.x = (Math.random() * 30) - 15;
-        }
-
-        // KOLIZJA
-        if (
-          Math.abs(e.position.z - car.position.z) < 3 &&
-          Math.abs(e.position.x - car.position.x) < 2
-        ) {
-          gameOver = true;
-          document.getElementById('status').innerText = '💥 PRZEGRANA';
-        }
-      });
-
-      camera.position.z = car.position.z + 12;
-      camera.position.x += (car.position.x - camera.position.x) * 0.05;
-      camera.lookAt(car.position);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      update();
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
+<script src="app.js"></script>
 </body>
 </html>
+
