@@ -16,6 +16,7 @@ body {
 header {
     padding: 30px;
     background: linear-gradient(180deg, #1db954, #121212);
+    text-align: center;
 }
 
 header h1 {
@@ -23,21 +24,35 @@ header h1 {
     font-size: 32px;
 }
 
-.container {
-    padding: 20px;
+header p {
+    opacity: 0.8;
+    margin: 5px 0 0 0;
 }
 
+.container {
+    padding: 20px;
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Piosenki */
 .track {
     display: flex;
     align-items: center;
     background: #181818;
     padding: 15px;
     border-radius: 10px;
+    margin-bottom: 15px;
+    transition: background 0.2s;
+}
+
+.track:hover {
+    background: #242424;
 }
 
 .play-btn {
-    width: 45px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     border: none;
     background: #1db954;
@@ -46,6 +61,17 @@ header h1 {
     margin-right: 15px;
 }
 
+.track-info h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.track-info span {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Player u dołu */
 .player {
     position: fixed;
     bottom: 0;
@@ -81,16 +107,29 @@ header h1 {
 </header>
 
 <div class="container">
+
     <div class="track">
-        <button class="play-btn" onclick="startSong()">▶</button>
-        <div>
-            <b>R.E.P.O</b><br>
-            <small>Młody AI</small>
+        <button class="play-btn" onclick="playSong('repo')">▶</button>
+        <div class="track-info">
+            <h3>R.E.P.O</h3>
+            <span>Młody AI</span>
         </div>
     </div>
+
+    <div class="track">
+        <button class="play-btn" onclick="playSong('yeah')">▶</button>
+        <div class="track-info">
+            <h3>Yeah</h3>
+            <span>Młody AI</span>
+        </div>
+    </div>
+
 </div>
 
+<!-- Player na dole -->
 <div class="player">
+    <button onclick="togglePlay()">⏯</button>
+    <span id="nowPlaying">Nie odtwarzasz</span>
     <div class="progress-container">
         <span class="time" id="current">0:00</span>
         <input type="range" id="progress" value="0">
@@ -98,23 +137,41 @@ header h1 {
     </div>
 </div>
 
+<!-- Audio -->
 <audio id="audio" preload="metadata">
-    <source src="repo.mp3" type="audio/mpeg">
+    <source id="audioSource" src="repo.mp3" type="audio/mpeg">
 </audio>
 
 <script>
 const audio = document.getElementById("audio");
+const audioSource = document.getElementById("audioSource");
 const progress = document.getElementById("progress");
 const current = document.getElementById("current");
 const duration = document.getElementById("duration");
+const nowPlaying = document.getElementById("nowPlaying");
 
-function startSong() {
-    audio.play().catch(err => {
-        alert("❌ Nie można odtworzyć audio – sprawdź repo.mp3");
-        console.error(err);
-    });
+let currentSong = 'repo'; // domyślnie R.E.P.O
+
+function playSong(song) {
+    if (currentSong !== song) {
+        currentSong = song;
+        audioSource.src = song + ".mp3";
+        audio.load();
+    }
+    audio.play().catch(err => console.error(err));
+    nowPlaying.innerText = song === 'repo' ? 'Młody AI – R.E.P.O' : 'Młody AI – Yeah';
 }
 
+// Zatrzymywanie / wznawianie
+function togglePlay() {
+    if (audio.paused) {
+        audio.play();
+    } else {
+        audio.pause();
+    }
+}
+
+// Pasek czasu
 audio.addEventListener("loadedmetadata", () => {
     progress.max = Math.floor(audio.duration);
     duration.innerText = formatTime(audio.duration);
@@ -129,6 +186,7 @@ progress.addEventListener("input", () => {
     audio.currentTime = progress.value;
 });
 
+// Formatowanie czasu
 function formatTime(sec) {
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
@@ -138,3 +196,4 @@ function formatTime(sec) {
 
 </body>
 </html>
+
