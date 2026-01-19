@@ -17,7 +17,7 @@ function update() {
 }
 
 function draw() {
-    drawWorld(ctx, camera);
+    drawWorld(ctx, camera, canvas.width, canvas.height);
     drawEnemies(ctx, camera);
     drawPlayer(ctx);
 }
