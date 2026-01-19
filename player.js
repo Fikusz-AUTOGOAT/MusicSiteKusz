@@ -1,14 +1,11 @@
-const player = {
-    x: 400,
-    y: 300,
-    speed: 3,
-    size: 20,
-    health: 100
-};
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 
-function drawPlayer(ctx) {
-    ctx.fillStyle = "orange";
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.size, 0, Math.PI * 2);
-    ctx.fill();
+export function createPlayer(scene) {
+    const player = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 2, 1),
+        new THREE.MeshStandardMaterial({ color: 0xffaa00 })
+    );
+    player.position.y = 1;
+    scene.add(player);
+    return player;
 }
